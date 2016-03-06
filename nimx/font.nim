@@ -356,6 +356,7 @@ when not defined js:
     iterator potentialFontFilesForFace(face: string): string =
         for sp in fontSearchPaths:
             yield sp / face & ".ttf"
+        yield getAppDir() / face & ".ttf"
 
     proc findFontFileForFace(face: string): string =
         for f in potentialFontFilesForFace(face):
@@ -462,6 +463,7 @@ proc getClosestCursorPositionToPointInString*(f: Font, s: string, p: Point, posi
         pt.x += f.horizontalSpacing
         inc i
     offset = if f.isHorizontal: closestPoint.x else: closestPoint.y
+    if offset == 0: position = 0
 
 proc cursorOffsetForPositionInString*(f: Font, s: string, position: int): Coord =
     var pt = zeroPoint
