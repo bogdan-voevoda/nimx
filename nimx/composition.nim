@@ -456,6 +456,20 @@ template setupPosteffectUniforms*(cc: CompiledComposition) =
     for pe in postEffectStack:
         pe.setupProc(cc)
 
+var overdrawValue = 0
+proc GetOverdrawValue*() : int =
+    return int(overdrawValue.float32 / 1000.float32)
+
+proc ResetOverdrawValue*() =
+     overdrawValue = 0
+
+var DIPValue = 0
+proc GetDIPValue*() : int =
+    return DIPValue
+
+proc ResetDIPValue*() =
+     DIPValue = 0
+
 template draw*(comp: var Composition, r: Rect, code: untyped): stmt =
     let ctx = currentContext()
     let gl = ctx.gl
@@ -478,6 +492,9 @@ template draw*(comp: var Composition, r: Rect, code: untyped): stmt =
     setUniform("bounds", r)
 
     setupPosteffectUniforms(cc)
+
+    overdrawValue += int(r.size.width * r.size.height)
+    DIPValue += 1
 
     block:
         code

@@ -71,12 +71,12 @@ proc newBuilder(platform: string): Builder =
     b.bundleId = "com.kromtech.testgame1"
     b.javaPackageId = "com.mycompany.MyGame"
 
-    b.disableClosureCompiler = false
+    b.disableClosureCompiler = true
 
     when defined(windows):
-        b.androidSdk = "D:\\Android\\android-sdk"
-        b.androidNdk = "D:\\Android\\android-ndk-r10e"
-        b.sdlRoot = "D:\\Android\\SDL2-2.0.3"
+        b.androidSdk = "C:\\build:\\Android\\android-sdk"
+        b.androidNdk = "C:\\build:\\Android\\android-ndk-r10e"
+        b.sdlRoot = "C:\\build:\\Android\\SDL2-2.0.3"
         b.nimIncludeDir = "C:\\Nim\\lib"
         b.appIconName = "MyGame.ico"
     else:
@@ -155,6 +155,7 @@ var
     afterBuild*: proc(b: Builder)
 
 when defined(Windows):
+    import winlean
     const silenceStdout = "2>nul"
 else:
     const silenceStdout = ">/dev/null"
@@ -168,8 +169,11 @@ proc copyResourceAsIs*(b: Builder, path: string) =
     let fromPath = b.originalResourcePath / path
     if not fileExists(destPath) or fileNewer(fromPath, destPath):
         echo "Copying resource: ", path
-        createDir(parentDir(destPath))
-        copyFile(fromPath, destPath)
+        if not dirExists(parentDir(destPath)): createDir(parentDir(destPath))
+        when defined(windows):
+            discard winlean.copyFileW(newWideCString(fromPath), newWideCString(destPath), 1)
+        else:
+            copyFile(fromPath, destPath)
 
 proc convertResource*(b: Builder, origPath, destExtension: string, conv : proc(fromPath, toPath: string)) =
     let op = b.originalResourcePath / origPath

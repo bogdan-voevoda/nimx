@@ -92,8 +92,13 @@ proc isHiddenFile(path: string): bool =
     elif lastSlash != path.len - 1:
         result = path[lastSlash + 1] == '.'
 
+when defined(windows):
+    import os
+
 proc getEnvCt(k: string): string {.compileTime.} =
-    when defined(buildOnWindows): # This should be defined by the naketools.nim
+    when defined(windows):
+        result = getEnv(k)
+    elif defined(buildOnWindows): # This should be defined by the naketools.nim
         result = staticExec("echo %" & k & "%")
     else:
         result = staticExec("echo $" & k)
