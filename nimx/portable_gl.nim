@@ -34,7 +34,7 @@ when defined js:
             TEXTURE_2D* : GLenum
             ONE_MINUS_SRC_ALPHA*, ONE_MINUS_DST_ALPHA*, SRC_ALPHA*, DST_ALPHA*, ONE*, DST_COLOR* : GLenum
             BLEND* : GLenum
-            TRIANGLES*, TRIANGLE_FAN*, TRIANGLE_STRIP, LINES* : GLenum
+            TRIANGLES*, TRIANGLE_FAN*, TRIANGLE_STRIP*, LINES* : GLenum
             COLOR_BUFFER_BIT*: int
             STENCIL_BUFFER_BIT*: int
             DEPTH_BUFFER_BIT*: int
@@ -415,7 +415,7 @@ proc isShaderCompiled*(gl: GL, shader: ShaderRef): bool {.inline.} =
     else:
         var compiled: GLint
         glGetShaderiv(shader, GL_COMPILE_STATUS, addr compiled)
-        result = if compiled == GL_TRUE: true else: false
+        result = GLboolean(compiled) == GLboolean(GL_TRUE)
 
 proc isProgramLinked*(gl: GL, prog: ProgramRef): bool {.inline.} =
     when defined js:
@@ -423,7 +423,7 @@ proc isProgramLinked*(gl: GL, prog: ProgramRef): bool {.inline.} =
     else:
         var linked: GLint
         glGetProgramiv(prog, GL_LINK_STATUS, addr linked)
-        result = if linked == GL_TRUE: true else: false
+        result = GLboolean(linked) == GLboolean(GL_TRUE)
 
 proc bufferData*(gl: GL, target: GLenum, data: openarray[GLfloat], usage: GLenum) {.inline.} =
     when defined(js):
