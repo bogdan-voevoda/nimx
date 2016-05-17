@@ -25,7 +25,7 @@ method enableAnimation*(w: EmscriptenWindow, flag: bool) =
 # assuming that touch devices may have only one window.
 var defaultWindow: EmscriptenWindow
 
-proc onMouse(eventType: cint, mouseEvent: ptr EmscriptenMouseEvent, userData: pointer): EM_BOOL {.cdecl.} =
+proc onMouseButton(eventType: cint, mouseEvent: ptr EmscriptenMouseEvent, userData: pointer): EM_BOOL {.cdecl.} =
     let w = cast[EmscriptenWindow](userData)
     template bsFromEt(): ButtonState =
         if eventType == 5:
@@ -44,10 +44,26 @@ proc onMouse(eventType: cint, mouseEvent: ptr EmscriptenMouseEvent, userData: po
     evt.window = w
     discard mainApplication().handleEvent(evt)
 
+proc onMouseMove(eventType: cint, mouseEvent: ptr EmscriptenMouseEvent, userData: pointer): EM_BOOL {.cdecl.} =
+    let w = cast[EmscriptenWindow](userData)
+    var evt = newMouseMoveEvent(newPoint(Coord(mouseEvent.targetX), Coord(mouseEvent.targetY)), uint32(mouseEvent.timestamp))
+    evt.window = w
+    discard mainApplication().handleEvent(evt)
+
+proc onMouseWheel(eventType: cint, wheelEvent: ptr EmscriptenWheelEvent, userData: pointer): EM_BOOL {.cdecl.} =
+    let w = cast[EmscriptenWindow](userData)
+    let pos = newPoint(Coord(wheelEvent.mouse.targetX), Coord(wheelEvent.mouse.targetY))
+    var evt = newEvent(etScroll, pos)
+    evt.window = w
+    evt.offset.x = wheelEvent.deltaX.Coord
+    evt.offset.y = wheelEvent.deltaY.Coord
+    if mainApplication().handleEvent(evt):
+        result = 1
+
 proc initCommon(w: EmscriptenWindow, r: view.Rect) =
     procCall init(w.Window, r)
 
-    let id = EM_ASM_INT """
+    let id = EM_ASM_INT("""
     if (window.__nimx_canvas_id === undefined) {
         window.__nimx_canvas_id = 0;
     } else {
@@ -55,11 +71,11 @@ proc initCommon(w: EmscriptenWindow, r: view.Rect) =
     }
     var canvas = document.createElement("canvas");
     canvas.id = "nimx_canvas" + window.__nimx_canvas_id;
-    canvas.width = 800;
-    canvas.height = 600;
+    canvas.width = $0;
+    canvas.height = $1;
     document.body.appendChild(canvas);
     return window.__nimx_canvas_id;
-    """
+    """, r.width, r.height)
 
     let canvId = "nimx_canvas" & $id
 
@@ -71,8 +87,10 @@ proc initCommon(w: EmscriptenWindow, r: view.Rect) =
     discard emscripten_webgl_make_context_current(w.ctx)
     w.renderingContext = newGraphicsContext()
 
-    discard emscripten_set_mousedown_callback(canvId, cast[pointer](w), 0, onMouse)
-    discard emscripten_set_mouseup_callback(canvId, cast[pointer](w), 0, onMouse)
+    discard emscripten_set_mousedown_callback(canvId, cast[pointer](w), 0, onMouseButton)
+    discard emscripten_set_mouseup_callback(canvId, cast[pointer](w), 0, onMouseButton)
+    discard emscripten_set_mousemove_callback(canvId, cast[pointer](w), 0, onMouseMove)
+    discard emscripten_set_wheel_callback(canvId, cast[pointer](w), 0, onMouseWheel)
 
     #w.enableAnimation(true)
     mainApplication().addWindow(w)

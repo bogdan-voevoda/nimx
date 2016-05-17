@@ -148,6 +148,8 @@ when defined js:
         oReq.addEventListener("load", reqListener)
         oReq.open("GET", pathForResource(resourceName))
         oReq.send()
+elif defined(emscripten):
+    import emscripten
 
 proc loadResourceAsync*(resourceName: string, handler: proc(s: Stream)) =
     when defined(js):
@@ -156,6 +158,18 @@ proc loadResourceAsync*(resourceName: string, handler: proc(s: Stream)) =
             {.emit: "`dataView` = new DataView(`data`);".}
             handler(newStreamWithDataView(dataView))
         loadJSResourceAsync(resourceName, "arraybuffer", nil, nil, reqListener)
+    elif defined(emscripten):
+        emscripten_async_wget_data(pathForResource(resourceName),
+        proc (data: pointer, sz: cint) =
+            var str = newString(sz)
+            copyMem(addr str[0], data, sz)
+            let s = newStringStream(str)
+            handler(s)
+        ,
+        proc () =
+            logi "WARNING: Resource not found: ", resourceName
+            handler(nil)
+        )
     else:
         handler(streamForResourceWithName(resourceName))
 
@@ -173,33 +187,3 @@ proc loadJsonResourceAsync*(resourceName: string, handler: proc(j: JsonNode)) =
                 s.close()
     else:
         handler(j)
-
-when isMainModule and defined(js):
-    var dv : ref RootObj
-    {.emit: """
-    var buffer = new ArrayBuffer(32);
-    var tmpdv = new DataView(buffer, 0);
-
-    tmpdv.setInt16(0, 42);
-    tmpdv.getInt16(0); //42
-
-    tmpdv.setInt8(2, "h".charCodeAt(0));
-    tmpdv.setInt8(3, "e".charCodeAt(0));
-    tmpdv.setInt8(4, "l".charCodeAt(0));
-    tmpdv.setInt8(5, "l".charCodeAt(0));
-    tmpdv.setInt8(6, "o".charCodeAt(0));
-
-    tmpdv.setFloat32(7, 3.14);
-    tmpdv.setFloat64(11, 3.14);
-
-    `dv`[0] = tmpdv;
-    """.}
-    let s = newStreamWithDataView(dv)
-    try:
-        echo s.readInt16()
-        echo s.readStr(4)
-        echo s.readChar()
-        echo s.readFloat32()
-        echo s.readFloat64()
-    except:
-        echo "Exception caught"
