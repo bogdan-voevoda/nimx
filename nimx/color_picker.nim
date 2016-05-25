@@ -304,7 +304,7 @@ method onTouchEv(cpva: ColorPickerV, e: var Event): bool =
     let cpv = ColorPickerView(cpva.superView)
 
     if e.buttonState == bsUp or true:
-        var v = (e.localPosition.x / cpva.frame.width).clamp(0.0, 1.0)
+        var v = (e.localPosition.x / cpva.frame.width)
         v = v.clamp(0.0, 1.0)
         cpv.circle.currentColor.v = v
         cpv.colorHasChanged(cpv.circle.currentColor)
